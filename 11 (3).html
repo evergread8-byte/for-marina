@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="ru" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Евгений & Марина • 11 Месяцев</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Syne:wght@600;700;800&family=VT323&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js & Confetti -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        display: ['"Syne"', 'sans-serif'],
+                        serif: ['"Cormorant Garamond"', 'serif'],
+                        hand: ['"Caveat"', 'cursive'],
+                        pixel: ['"VT323"', 'monospace']
+                    },
+                    colors: {
+                        cosmos: '#06050b',
+                        'space-card': 'rgba(17, 14, 28, 0.65)',
+                        rose: { neon: '#ff3366', glow: 'rgba(255, 51, 102, 0.45)' },
+                        teal: { neon: '#0df2c9' },
+                        violet: { neon: '#9333ea' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        body { background-color: #06050b; color: #f3f4f6; overflow-x: hidden; cursor: default; }
+        
+        #webgl-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: auto;
+        }
+        
+        .glass-panel {
+            background: rgba(14, 11, 24, 0.72);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        }
+        .glass-panel-glow {
+            border: 1px solid rgba(255, 51, 102, 0.35);
+            box-shadow: 0 20px 60px rgba(255, 51, 102, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+        .tilt-card {
+            transform-style: preserve-3d;
+            perspective: 1000px;
+            transition: transform 0.2s cubic-bezier(0.2, 0, 0.2, 1), box-shadow 0.3s ease;
+        }
+        
+        .hud-blur {
+            background: rgba(9, 7, 18, 0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .hud-active-tab {
+            background: rgba(255, 51, 102, 0.22);
+            border-color: rgba(255, 51, 102, 0.6);
+            color: #ffffff;
+            box-shadow: 0 0 20px rgba(255, 51, 102, 0.3);
+        }
+
+        /* Wishlist Floating Heart */
+        @keyframes floatUpFade {
+            0% { transform: translateY(0) scale(0.8); opacity: 1; }
+            50% { transform: translateY(-70px) scale(1.6); opacity: 0.9; }
+            100% { transform: translateY(-160px) scale(2.2); opacity: 0; }
+        }
+        .wish-heart {
+            position: fixed;
+            pointer-events: none;
+            font-size: 3.5rem;
+            animation: floatUpFade 1.6s ease-out forwards;
+            z-index: 100;
+        }
+
+        /* Stardew Valley Authentic UI */
+        .sdv-box {
+            background: #eac88b;
+            border: 4px solid #703c18;
+            box-shadow: 0 0 0 4px #c48149, 0 20px 50px rgba(0, 0, 0, 0.8);
+            image-rendering: pixelated;
+        }
+        .sdv-portrait-box {
+            background: #f7ddb9;
+            border: 3px solid #703c18;
+        }
+
+        /* Scrollbars */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #06050b; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 51, 102, 0.3); border-radius: 10px; }
+
+        textarea { resize: none; outline: none; user-select: auto; -webkit-user-select: auto; }
+        .tab-pane { transition: opacity 0.35s ease, transform 0.35s ease; }
+    </style>
+</head>
+<body class="selection:bg-rose-500 selection:text-white">
+
+    <!-- WebGL 3D Canvas -->
+    <canvas id="webgl-canvas"></canvas>
+
+    <!-- Top Navigation Header -->
+    <header class="fixed top-3 sm:top-4 left-0 w-full z-40 px-2 sm:px-8 flex justify-between items-center pointer-events-none">
+        <!-- Logo -->
+        <div class="pointer-events-auto hidden md:flex items-center gap-2.5 hud-blur px-4 py-2 rounded-full shadow-2xl">
+            <div class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></div>
+            <span class="font-display text-xs tracking-wider uppercase text-zinc-300 font-semibold">
+                Женя &amp; Мася • 11M
+            </span>
+        </div>
+
+        <!-- Tabs Nav -->
+        <nav class="pointer-events-auto mx-auto md:mx-0 hud-blur p-1 sm:p-1.5 rounded-full flex items-center gap-1 sm:gap-2 shadow-2xl overflow-x-auto max-w-[95vw] sm:max-w-none">
+            <button onclick="switchTab('main')" id="nav-main" class="hud-active-tab px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-mono font-medium transition-all flex items-center gap-1.5 whitespace-nowrap">
+                <i data-lucide="heart" class="w-3.5 h-3.5 text-rose-400"></i>
+                <span>11 Месяцев</span>
+            </button>
+            <button onclick="switchTab('future')" id="nav-future" class="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-mono text-zinc-400 hover:text-white transition-all flex items-center gap-1.5 whitespace-nowrap">
+                <i data-lucide="lock" class="w-3.5 h-3.5 text-violet-400"></i>
+                <span>Будущее</span>
+            </button>
+            <button onclick="switchTab('sky')" id="nav-sky" class="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-mono text-zinc-400 hover:text-white transition-all flex items-center gap-1.5 whitespace-nowrap">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-teal-400"></i>
+                <span>Наше Небо</span>
+            </button>
+            <button onclick="switchTab('stardew')" id="nav-stardew" class="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-mono text-zinc-400 hover:text-white transition-all flex items-center gap-1.5 whitespace-nowrap">
+                <i data-lucide="sprout" class="w-3.5 h-3.5 text-emerald-400"></i>
+                <span>Долина Звёзд</span>
+            </button>
+        </nav>
+
+        <!-- Lo-Fi Synthesizer Sound Button -->
+        <div class="pointer-events-auto hidden sm:flex items-center gap-3">
+            <button id="soundToggle" class="hud-blur px-4 py-2 rounded-full flex items-center gap-3 text-xs text-zinc-300 hover:text-white border border-white/10 hover:border-rose-500/50 transition-all shadow-lg active:scale-95 group">
+                <div class="flex items-end gap-0.5 h-3.5 w-4" id="audioWaves">
+                    <span class="w-1 bg-zinc-500 rounded-full h-1 group-hover:bg-rose-400 transition-all"></span>
+                    <span class="w-1 bg-zinc-500 rounded-full h-2 group-hover:bg-rose-400 transition-all"></span>
+                    <span class="w-1 bg-zinc-500 rounded-full h-3 group-hover:bg-rose-400 transition-all"></span>
+                </div>
+                <span id="audioLabel" class="font-medium text-[11px] uppercase tracking-wider">Lo-Fi</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- =========================================================
+         TAB 1: Главная (11 Месяцев)
+    ========================================================== -->
+    <main id="tab-main" class="tab-pane relative z-10 w-full pointer-events-none opacity-100">
+        <!-- Hero Section -->
+        <section class="min-h-screen w-full flex flex-col justify-center items-center px-4 py-24 text-center pointer-events-auto">
+            <div class="max-w-4xl mx-auto flex flex-col items-center">
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full hud-blur border border-rose-500/30 text-rose-300 text-xs font-mono mb-4 tracking-widest uppercase">
+                    <span>30 Ноября 2025</span>
+                    <span class="text-zinc-500">→</span>
+                    <span class="text-rose-400 font-bold">30 Октября 2026</span>
+                </div>
+
+                <h1 class="font-display text-4xl sm:text-6xl md:text-8xl font-extrabold tracking-tight text-white mb-4 leading-none">
+                    Евгений <span class="text-rose-500 font-serif font-light text-3xl sm:text-6xl">&amp;</span>
+                    <div class="relative inline-block mt-2 sm:mt-0">
+                        Марина 
+                        <span id="surnameBadge" class="relative inline-block cursor-pointer underline decoration-rose-500/60 decoration-wavy underline-offset-8 group transition-all">
+                            <span id="surnameName" class="text-rose-300 group-hover:text-rose-400 transition-all duration-300">Максименко</span>
+                            <span class="absolute -top-7 left-1/2 -translate-x-1/2 text-[10px] font-mono tracking-wider uppercase px-2 py-0.5 rounded bg-rose-500 text-white opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap shadow-lg">
+                                Примерь фамилию ✨
+                            </span>
+                        </span>
+                    </div>
+                </h1>
+                
+                <p class="max-w-xl text-zinc-300 text-sm sm:text-base font-light leading-relaxed mb-8">
+                    Вращай 3D кристалл сердца мышью или касанием. Кликни по нему, чтобы послать импульс любви.
+                </p>
+
+                <!-- Live Counters -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 w-full max-w-2xl px-2">
+                    <div class="hud-blur rounded-2xl p-4 border border-white/5">
+                        <div class="font-display text-2xl sm:text-3xl font-bold text-white">334</div>
+                        <div class="text-[10px] uppercase tracking-widest text-zinc-400 font-mono">Дней рядом</div>
+                    </div>
+                    <div class="hud-blur rounded-2xl p-4 border border-white/5">
+                        <div class="font-display text-2xl sm:text-3xl font-bold text-rose-300">8,016</div>
+                        <div class="text-[10px] uppercase tracking-widest text-zinc-400 font-mono">Часов тепла</div>
+                    </div>
+                    <div class="hud-blur rounded-2xl p-4 border border-white/5">
+                        <div class="font-display text-2xl sm:text-3xl font-bold text-white">480,960</div>
+                        <div class="text-[10px] uppercase tracking-widest text-zinc-400 font-mono">Минут заботы</div>
+                    </div>
+                    <div class="hud-blur rounded-2xl p-4 border border-white/5">
+                        <div class="font-display text-2xl sm:text-3xl font-bold text-rose-400 flex items-center justify-center gap-1">
+                            <span>35.4M</span>
+                            <span class="text-xs animate-ping">♥</span>
+                        </div>
+                        <div class="text-[10px] uppercase tracking-widest text-zinc-400 font-mono">Ударов сердца</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-12 flex flex-col items-center gap-2 text-zinc-400">
+                <span class="text-[10px] font-mono tracking-widest uppercase">Листай в хронологию</span>
+                <i data-lucide="chevron-down" class="w-4 h-4 animate-bounce text-rose-400"></i>
+            </div>
+        </section>
+
+        <!-- Chapters Section -->
+        <section class="py-20 px-4 sm:px-8 max-w-6xl mx-auto pointer-events-auto">
+            <div class="text-center max-w-2xl mx-auto mb-14">
+                <span class="text-rose-400 text-xs font-mono tracking-widest uppercase">Хроника сближения</span>
+                <h2 class="font-display text-3xl sm:text-5xl font-bold text-white mt-2 mb-3">11 Глав Нашей Вселенной</h2>
+                <p class="text-zinc-400 text-xs sm:text-sm">Каждая карточка реагирует на курсор в 3D пространстве</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="chaptersContainer"></div>
+        </section>
+
+        <!-- Coupons Section -->
+        <section class="py-20 px-4 sm:px-8 max-w-6xl mx-auto pointer-events-auto">
+            <div class="text-center max-w-xl mx-auto mb-14">
+                <span class="text-rose-400 text-xs font-mono tracking-widest uppercase">Подарочные привилегии</span>
+                <h2 class="font-display text-3xl sm:text-5xl font-bold text-white mt-2 mb-3">Бессрочные Купоны Заботы</h2>
+                <p class="text-zinc-400 text-xs sm:text-sm">Активируй любой купон прямо сейчас — они действуют вечно!</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Coupon 1 -->
+                <div class="glass-panel tilt-card rounded-2xl p-6 flex flex-col justify-between group">
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-[10px] font-mono uppercase text-rose-400 bg-rose-500/10 px-2.5 py-1 rounded border border-rose-500/20">Билет #01</span>
+                            <i data-lucide="clapperboard" class="w-5 h-5 text-zinc-400"></i>
+                        </div>
+                        <h3 class="font-display text-xl text-white font-semibold mb-2">Вечер Кино</h3>
+                        <p class="text-zinc-400 text-xs mb-6 leading-relaxed">Фильм или мультфильм на твой выбор. Вкусняшки, теплый чай и море объятий.</p>
+                    </div>
+                    <button onclick="stampCoupon(this)" class="w-full py-2.5 rounded-xl border border-white/15 bg-white/5 hover:bg-rose-500/20 text-xs text-zinc-200 transition-all flex items-center justify-center gap-2">
+                        <i data-lucide="stamp" class="w-3.5 h-3.5 text-rose-400"></i> <span>Активировать купон</span>
+                    </button>
+                </div>
+                <!-- Coupon 2 -->
+                <div class="glass-panel tilt-card rounded-2xl p-6 flex flex-col justify-between group">
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-[10px] font-mono uppercase text-violet-400 bg-violet-500/10 px-2.5 py-1 rounded border border-violet-500/20">Билет #02</span>
+                            <i data-lucide="heart-handshake" class="w-5 h-5 text-zinc-400"></i>
+                        </div>
+                        <h3 class="font-display text-xl text-white font-semibold mb-2">Анти-Стресс Сеанс</h3>
+                        <p class="text-zinc-400 text-xs mb-6 leading-relaxed">Безлимитный сеанс нежности и поддержки. Снимает любую усталость и тревогу.</p>
+                    </div>
+                    <button onclick="stampCoupon(this)" class="w-full py-2.5 rounded-xl border border-white/15 bg-white/5 hover:bg-rose-500/20 text-xs text-zinc-200 transition-all flex items-center justify-center gap-2">
+                        <i data-lucide="stamp" class="w-3.5 h-3.5 text-rose-400"></i> <span>Активировать купон</span>
+                    </button>
+                </div>
+                <!-- Coupon 3 -->
+                <div class="glass-panel tilt-card rounded-2xl p-6 flex flex-col justify-between group">
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-[10px] font-mono uppercase text-teal-400 bg-teal-500/10 px-2.5 py-1 rounded border border-teal-500/20">Билет #03</span>
+                            <i data-lucide="sparkle" class="w-5 h-5 text-zinc-400"></i>
+                        </div>
+                        <h3 class="font-display text-xl text-white font-semibold mb-2">Любое Желание</h3>
+                        <p class="text-zinc-400 text-xs mb-6 leading-relaxed">Любой спонтанный каприз или совместная идея исполняются безоговорочно.</p>
+                    </div>
+                    <button onclick="stampCoupon(this)" class="w-full py-2.5 rounded-xl border border-white/15 bg-white/5 hover:bg-rose-500/20 text-xs text-zinc-200 transition-all flex items-center justify-center gap-2">
+                        <i data-lucide="stamp" class="w-3.5 h-3.5 text-rose-400"></i> <span>Активировать купон</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Letter Trigger -->
+        <section class="pb-28 px-4 max-w-3xl mx-auto pointer-events-auto text-center">
+            <button onclick="openLetter()" class="px-8 py-4 rounded-full bg-gradient-to-r from-rose-500 via-rose-600 to-pink-600 text-white font-medium text-sm shadow-[0_0_35px_rgba(255,51,102,0.4)] hover:shadow-[0_0_50px_rgba(255,51,102,0.6)] hover:scale-105 active:scale-95 transition-all inline-flex items-center gap-3">
+                <i data-lucide="mail-open" class="w-4 h-4"></i>
+                <span>Прочесть личное письмо на 11 Месяцев</span>
+            </button>
+        </section>
+    </main>
+
+    <!-- =========================================================
+         TAB 2: Будущее (Капсула и Желания)
+    ========================================================== -->
+    <main id="tab-future" class="tab-pane absolute top-0 left-0 w-full hidden opacity-0 pointer-events-none">
+        <section class="min-h-screen px-4 pt-32 pb-24 max-w-5xl mx-auto pointer-events-auto">
+            
+            <div class="text-center max-w-2xl mx-auto mb-16">
+                <i data-lucide="plane-landing" class="w-8 h-8 text-rose-400 mx-auto mb-4 animate-bounce"></i>
+                <h2 class="font-display text-3xl sm:text-5xl font-bold text-white mb-4">Километры скоро исчезнут</h2>
+                <p class="text-zinc-300 text-sm font-light leading-relaxed">
+                    Все эти месяцы на расстоянии вели нас к главному — моменту, когда мы наконец сможем обнять друг друга по-настоящему. Наша встреча в ноябре изменит всё, и нашу первую годовщину мы будем отмечать уже глядя глаза в глаза.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Interactive Wishlist -->
+                <div class="glass-panel rounded-3xl p-8 border-rose-500/30 relative overflow-hidden">
+                    <div class="absolute -top-10 -right-10 w-32 h-32 bg-pink-500/20 blur-3xl rounded-full"></div>
+                    <span class="text-xs font-mono text-rose-400 uppercase tracking-widest mb-2 block">Мечты о встрече</span>
+                    <h3 class="font-display text-2xl text-white font-bold mb-3">Wishlist Маси</h3>
+                    <p class="text-xs text-zinc-400 mb-6">Напиши сюда то, что мы сделаем первым делом, когда встретимся. Это улетит прямо во Вселенную (и мне в сердце).</p>
+                    
+                    <textarea id="wishlistInput" rows="4" placeholder="Например: Погулять по ночному городу, заказать пиццу и уснуть в обнимку..." class="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-white placeholder-zinc-500 focus:border-rose-500/50 transition-colors mb-4"></textarea>
+                    
+                    <button id="sendWishBtn" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-semibold text-xs tracking-wide transition-all flex items-center justify-center gap-2 active:scale-95 shadow-lg">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                        <span>Отправить во Вселенную</span>
+                    </button>
+                </div>
+
+                <!-- Time Capsule -->
+                <div class="glass-panel glass-panel-glow rounded-3xl p-8 flex flex-col items-center justify-center text-center relative overflow-hidden">
+                    <div class="w-16 h-16 rounded-full bg-violet-500/20 border border-violet-500/40 flex items-center justify-center text-violet-300 mb-6 shadow-[0_0_30px_rgba(147,51,234,0.3)]">
+                        <i data-lucide="lock" class="w-7 h-7"></i>
+                    </div>
+                    <span class="text-xs font-mono text-violet-400 uppercase tracking-widest mb-2">Засекречено</span>
+                    <h3 class="font-display text-2xl text-white font-bold mb-3">Капсула Годовщины</h3>
+                    <p class="text-xs text-zinc-300 mb-8 max-w-xs mx-auto font-light leading-relaxed">
+                        Здесь спрятано мое главное обещание для тебя. Капсула автоматически откроется ровно в нашу первую годовщину — 30 ноября 2026.
+                    </p>
+
+                    <!-- Countdown -->
+                    <div class="flex items-center gap-3 font-mono text-white text-lg">
+                        <div class="flex flex-col items-center hud-blur px-4 py-2 rounded-xl border border-white/5">
+                            <span id="c-days" class="font-bold text-xl text-rose-300">31</span>
+                            <span class="text-[9px] uppercase text-zinc-400">Дней</span>
+                        </div>
+                        <span class="text-zinc-600 font-bold">:</span>
+                        <div class="flex flex-col items-center hud-blur px-4 py-2 rounded-xl border border-white/5">
+                            <span id="c-hours" class="font-bold text-xl text-violet-300">12</span>
+                            <span class="text-[9px] uppercase text-zinc-400">Часов</span>
+                        </div>
+                        <span class="text-zinc-600 font-bold">:</span>
+                        <div class="flex flex-col items-center hud-blur px-4 py-2 rounded-xl border border-white/5">
+                            <span id="c-mins" class="font-bold text-xl text-teal-300">45</span>
+                            <span class="text-[9px] uppercase text-zinc-400">Минут</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- =========================================================
+         TAB 3: Наше Небо (3D Созвездие)
+    ========================================================== -->
+    <main id="tab-sky" class="tab-pane absolute top-0 left-0 w-full hidden opacity-0 pointer-events-none">
+        <section class="min-h-screen flex flex-col justify-between px-4 pt-28 pb-12 pointer-events-auto">
+            
+            <div class="text-center max-w-2xl mx-auto">
+                <i data-lucide="telescope" class="w-8 h-8 text-teal-400 mx-auto mb-4"></i>
+                <h2 class="font-display text-3xl sm:text-4xl font-bold text-white mb-3">Небо зимы 2025 года</h2>
+                <p class="text-zinc-300 text-sm font-light mb-2">
+                    Вращай созвездие мышью. Нажимай на <span class="text-teal-300 font-semibold">звёзды</span>, чтобы прочесть скрытые воспоминания.
+                </p>
+            </div>
+
+            <!-- Memory HUD shown when star is clicked -->
+            <div class="w-full flex justify-center pb-8">
+                <div id="skyHud" class="hud-blur border border-teal-500/40 rounded-2xl p-5 sm:p-6 max-w-lg w-full text-center transform translate-y-10 opacity-0 transition-all duration-500 shadow-2xl">
+                    <span class="text-[10px] font-mono uppercase text-teal-400 tracking-widest block mb-2">Запись из звёздной памяти</span>
+                    <p id="skyHudText" class="font-serif text-xl sm:text-2xl text-white italic">«...»</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- =========================================================
+         TAB 4: Долина Звёзд (Stardew Valley)
+    ========================================================== -->
+    <main id="tab-stardew" class="tab-pane absolute top-0 left-0 w-full hidden opacity-0 pointer-events-none">
+        <section class="min-h-screen px-4 pt-28 pb-20 max-w-4xl mx-auto pointer-events-auto flex flex-col items-center">
+            
+            <!-- Banner -->
+            <div class="text-center max-w-xl mx-auto mb-6">
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full hud-blur border border-amber-500/40 text-amber-300 text-xs font-mono mb-3 tracking-widest uppercase">
+                    <i data-lucide="cloud-rain" class="w-3.5 h-3.5 text-blue-400 animate-pulse"></i>
+                    <span>Дождливый день на нашей ферме</span>
+                </div>
+                <h2 class="font-display text-3xl sm:text-5xl font-extrabold text-white mb-2">
+                    Ферма Евгения &amp; Маси
+                </h2>
+                <p class="text-zinc-300 text-xs sm:text-sm font-light">
+                    Погладь персонажей фермы или прикоснись к Звёздной Капле!
+                </p>
+            </div>
+
+            <!-- Stardew Valley Pixel Characters Bar -->
+            <div class="flex flex-wrap items-center justify-center gap-4 sm:gap-8 my-4">
+                <!-- Junimo -->
+                <div onclick="petAnimal('junimo')" class="glass-panel p-4 rounded-2xl flex flex-col items-center cursor-pointer hover:border-emerald-400/50 hover:scale-105 active:scale-95 transition-all group shadow-lg">
+                    <div class="w-16 h-16 flex items-center justify-center relative">
+                        <svg viewBox="0 0 16 16" class="w-14 h-14 group-hover:-translate-y-1 transition-transform" style="image-rendering: pixelated;">
+                            <path d="M7 1h2v2H7z" fill="#388e3c"/>
+                            <path d="M9 2h2v1H9z" fill="#4caf50"/>
+                            <path d="M4 4h8v1H4zm-1 1h10v6H3zm1 6h8v1H4z" fill="#81c784"/>
+                            <path d="M4 6h2v2H4zm6 0h2v2h-2z" fill="#1b5e20"/>
+                            <path d="M7 8h2v1H7z" fill="#e91e63"/>
+                            <path d="M4 12h2v2H4zm6 0h2v2h-2z" fill="#2e7d32"/>
+                        </svg>
+                        <span class="absolute -top-2 -right-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity">🍎</span>
+                    </div>
+                    <span class="font-mono text-xs text-emerald-300 font-semibold mt-2">Джунимо</span>
+                    <span class="text-[9px] text-zinc-400 font-mono">Приносит удачу</span>
+                </div>
+
+                <!-- Blue Chicken -->
+                <div onclick="petAnimal('chicken')" class="glass-panel p-4 rounded-2xl flex flex-col items-center cursor-pointer hover:border-blue-400/50 hover:scale-105 active:scale-95 transition-all group shadow-lg">
+                    <div class="w-16 h-16 flex items-center justify-center relative">
+                        <svg viewBox="0 0 16 16" class="w-14 h-14 group-hover:-translate-y-1 transition-transform" style="image-rendering: pixelated;">
+                            <path d="M5 3h3v1H5z" fill="#ef4444"/>
+                            <path d="M4 4h5v3H4z" fill="#60a5fa"/>
+                            <path d="M9 5h3v2H9z" fill="#f59e0b"/>
+                            <path d="M3 7h9v5H3zm-1 1h2v3H2z" fill="#3b82f6"/>
+                            <path d="M7 5h1v1H7z" fill="#1e3a8a"/>
+                            <path d="M4 12h2v2H4zm4 0h2v2H8z" fill="#f59e0b"/>
+                        </svg>
+                        <span class="absolute -top-2 -right-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity">🥚</span>
+                    </div>
+                    <span class="font-mono text-xs text-blue-300 font-semibold mt-2">Голубая Курочка</span>
+                    <span class="text-[9px] text-zinc-400 font-mono">100% нежности</span>
+                </div>
+
+                <!-- Stardew Farm Cat -->
+                <div onclick="petAnimal('cat')" class="glass-panel p-4 rounded-2xl flex flex-col items-center cursor-pointer hover:border-amber-400/50 hover:scale-105 active:scale-95 transition-all group shadow-lg">
+                    <div class="w-16 h-16 flex items-center justify-center relative">
+                        <svg viewBox="0 0 16 16" class="w-14 h-14 group-hover:-translate-y-1 transition-transform" style="image-rendering: pixelated;">
+                            <path d="M3 3h2v2H3zm8 0h2v2h-2z" fill="#d97706"/>
+                            <path d="M4 4h8v5H4z" fill="#f59e0b"/>
+                            <path d="M5 6h2v1H5zm4 0h2v1H9z" fill="#1f2937"/>
+                            <path d="M7 7h2v1H7z" fill="#fb7185"/>
+                            <path d="M3 9h10v4H3z" fill="#d97706"/>
+                            <path d="M12 7h2v5h-2z" fill="#b45309"/>
+                            <path d="M4 13h2v2H4zm6 0h2v2h-2z" fill="#b45309"/>
+                        </svg>
+                        <span class="absolute -top-2 -right-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity">🐾</span>
+                    </div>
+                    <span class="font-mono text-xs text-amber-300 font-semibold mt-2">Рыжий Котик</span>
+                    <span class="text-[9px] text-zinc-400 font-mono">Мурлычет для Маси</span>
+                </div>
+            </div>
+
+            <!-- Authentic Stardew Dialogue Box -->
+            <div class="w-full max-w-2xl my-4">
+                <div class="sdv-box p-5 sm:p-6 rounded-2xl relative">
+                    <div class="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+                        <!-- NPC Portrait (Zhenya) -->
+                        <div class="sdv-portrait-box w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 rounded-xl flex flex-col items-center justify-center shadow-inner">
+                            <i data-lucide="heart" class="w-10 h-10 text-red-600 fill-red-600 animate-pulse"></i>
+                            <span class="font-bold text-[11px] font-mono tracking-wider text-[#633318] mt-1">Женя (14 ♥)</span>
+                        </div>
+                        <!-- Dialog Text -->
+                        <div class="flex-1 flex flex-col justify-between w-full">
+                            <div>
+                                <h4 class="font-bold text-base sm:text-lg font-mono text-[#522912] flex items-center justify-between border-b-2 border-[#caa072] pb-1.5 mb-2.5">
+                                    <span>Женя</span>
+                                    <span class="text-xs font-mono text-[#8a532d]">Отношения: Любовь навсегда</span>
+                                </h4>
+                                <p id="stardewDialogText" class="font-hand text-2xl sm:text-3xl text-[#4a220a] leading-snug">
+                                    «Мася, в Stardew Valley этот синий кулон дарят только той единственной, с кем хотят остаться навсегда. Наша ферма ждёт тебя, а я жду нашей встречи в ноябре!»
+                                </p>
+                            </div>
+                            <div class="flex items-center justify-end gap-3 mt-4 pt-2 border-t border-[#caa072]">
+                                <button onclick="nextStardewDialogue()" class="px-4 py-1.5 rounded-lg bg-[#965529] hover:bg-[#783e16] text-[#ffebd4] text-xs font-mono font-bold transition-transform active:scale-95 shadow">
+                                    Дальше ▶
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stardrop Button -->
+            <div class="mt-4 flex flex-col items-center gap-2">
+                <button onclick="triggerStardrop()" class="px-8 py-3.5 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-mono text-xs sm:text-sm font-semibold tracking-wider shadow-[0_0_35px_rgba(96,165,250,0.4)] active:scale-95 transition-all flex items-center gap-3">
+                    <i data-lucide="star" class="w-4 h-4 text-amber-300 fill-amber-300 animate-spin" style="animation-duration: 8s;"></i>
+                    <span>Вручить Масе Звёздную каплю (Stardrop)</span>
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- =========================================================
+         MODALS & TOAST
+    ========================================================== -->
+    <!-- Modal Letter -->
+    <div id="letterModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl opacity-0 pointer-events-none transition-all duration-300">
+        <div id="letterContentBox" class="glass-panel max-w-2xl w-full rounded-3xl p-6 sm:p-10 border border-rose-500/40 max-h-[90vh] overflow-y-auto transform scale-95 transition-all duration-300 relative shadow-2xl">
+            <button onclick="closeLetter()" class="absolute top-5 right-5 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-zinc-300 hover:text-white transition-colors">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+            <div class="text-center pb-6 border-b border-white/10 mb-6">
+                <span class="text-rose-400 font-mono text-xs uppercase tracking-widest">30 Октября 2026 • 11 Месяцев</span>
+                <h3 class="font-display text-2xl sm:text-4xl text-white font-bold mt-2">Моей любимой Масе</h3>
+            </div>
+            <div class="space-y-4 font-serif text-lg sm:text-xl text-zinc-200 leading-relaxed font-light">
+                <p>Мариша, солнышко! Сегодня нашей истории исполняется ровно <strong class="text-rose-400 font-semibold">11 месяцев</strong>. До нашего первого официального года остался всего один месяц, и я не перестаю удивляться тому, как быстро и одновременно насыщенно пролетело это время.</p>
+                <p>За эти 334 дня мы прошли через звонки до рассвета, километры расстояний, моменты, когда хотелось бросить всё и просто быть рядом, и тысячи искренних улыбок. Твой голос стал для меня самым уютным домом.</p>
+                <p>Спасибо тебе за то, какая ты настоящая, нежная, добрая и как трепетно умеешь любить. Ты вдохновляешь меня расти и беречь то счастье, которое у нас есть.</p>
+                <p class="text-rose-300 italic">И помни: фамилия Кох тебе не просто подходит — она ждет тебя. С нашим маленьким юбилеем, моя любимая девочка! ❤️</p>
+            </div>
+            <div class="mt-8 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                    <p class="font-display text-sm text-white font-semibold">Твой Женя</p>
+                    <p class="text-[11px] text-zinc-400 font-mono">30.11.2025 → Навсегда</p>
+                </div>
+                <button onclick="replyLove()" class="px-6 py-2.5 rounded-full bg-rose-500 hover:bg-rose-600 text-white font-sans text-xs font-semibold tracking-wider transition-colors flex items-center gap-2">
+                    <i data-lucide="heart" class="w-3.5 h-3.5 fill-white"></i>
+                    <span>Я тоже безумно тебя люблю!</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Stardrop (Stardew Achievement) -->
+    <div id="stardropModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md opacity-0 pointer-events-none transition-all duration-300">
+        <div id="stardropBox" class="sdv-box max-w-lg w-full p-6 sm:p-8 rounded-2xl relative text-center transform scale-90 transition-all duration-300">
+            <button onclick="closeStardrop()" class="absolute top-4 right-4 text-[#723a18] hover:text-[#381602]">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            <div class="w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <svg viewBox="0 0 16 16" class="w-16 h-16 drop-shadow-lg animate-bounce" style="image-rendering: pixelated;">
+                    <path d="M7 1h2v2H7z" fill="#9333ea"/>
+                    <path d="M6 3h4v2H6z" fill="#a855f7"/>
+                    <path d="M3 5h10v2H3z" fill="#c084fc"/>
+                    <path d="M1 7h14v3H1z" fill="#e879f9"/>
+                    <path d="M3 10h10v2H3z" fill="#c084fc"/>
+                    <path d="M5 12h6v2H5z" fill="#a855f7"/>
+                    <path d="M7 14h2v1H7z" fill="#7e22ce"/>
+                    <path d="M7 6h2v3H7z" fill="#fef08a"/>
+                </svg>
+            </div>
+            <h3 class="font-mono text-xl sm:text-2xl font-black text-[#50240d] mb-3">
+                Ты нашла Звёздную каплю!
+            </h3>
+            <p class="font-hand text-2xl sm:text-3xl text-[#421b06] leading-relaxed mb-6">
+                «Твой разум наполняется мыслями о Жене... Твой максимальный запас любви, радости и энергии увеличен навсегда!»
+            </p>
+            <button onclick="closeStardrop()" class="px-6 py-2.5 rounded-lg bg-[#965529] hover:bg-[#783e16] text-[#fff0dd] font-mono text-sm font-bold shadow-lg transition-transform active:scale-95">
+                Забрать в сердце ♥
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast UI -->
+    <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 px-5 py-3 rounded-2xl hud-blur border border-rose-500/40 text-xs text-white flex items-center gap-3 shadow-2xl pointer-events-none">
+        <i data-lucide="sparkles" class="w-4 h-4 text-rose-400"></i>
+        <span id="toastMsg">Уведомление</span>
+    </div>
+
+    <!-- =========================================================
+         MAIN APPLICATION JAVASCRIPT
+    ========================================================== -->
+    <script>
+        lucide.createIcons();
+
+        /* --- Global State --- */
+        let currentTab = 'main';
+        const tabs = ['main', 'future', 'sky', 'stardew'];
+
+        /* --- Tab Switching Function --- */
+        function switchTab(tabId) {
+            currentTab = tabId;
+            tabs.forEach(t => {
+                const navBtn = document.getElementById('nav-' + t);
+                const pane = document.getElementById('tab-' + t);
+
+                if (t === tabId) {
+                    navBtn.className = "hud-active-tab px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-mono font-medium transition-all flex items-center gap-1.5 whitespace-nowrap";
+                    pane.classList.remove('hidden');
+                    pane.style.position = 'relative';
+                    setTimeout(() => {
+                        pane.classList.remove('opacity-0');
+                        pane.classList.add('pointer-events-auto');
+                    }, 40);
+                } else {
+                    navBtn.className = "px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-mono text-zinc-400 hover:text-white transition-all flex items-center gap-1.5 whitespace-nowrap";
+                    pane.classList.add('opacity-0');
+                    pane.classList.remove('pointer-events-auto');
+                    setTimeout(() => {
+                        if (currentTab !== t) {
+                            pane.classList.add('hidden');
+                            pane.style.position = 'absolute';
+                        }
+                    }, 350);
+                }
+            });
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            if (tabId !== 'sky') {
+                const hud = document.getElementById('skyHud');
+                hud.classList.remove('translate-y-0', 'opacity-100');
+                hud.classList.add('translate-y-10', 'opacity-0');
+            }
+        }
+
+        /* --- THREE.JS 3D SCENE SETUP --- */
+        const canvas = document.getElementById('webgl-canvas');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x06050b, 0.035);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.z = 7;
+
+        const renderer = new THREE.WebGLRenderer({
+            canvas: canvas,
+            antialias: true,
+            alpha: true,
+            powerPreference: "high-performance"
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        /* Lights */
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+        scene.add(ambientLight);
+
+        const pointLightRose = new THREE.PointLight(0xff3366, 3, 20);
+        pointLightRose.position.set(0, 2, 4);
+        scene.add(pointLightRose);
+
+        const pointLightTeal = new THREE.PointLight(0x0df2c9, 2, 20);
+        pointLightTeal.position.set(-3, -2, -2);
+        scene.add(pointLightTeal);
+
+        /* 1. Global Particles (Stars and Rain) */
+        const particlesCount = 1200;
+        const particlePositions = new Float32Array(particlesCount * 3);
+        const particleVelocities = new Float32Array(particlesCount);
+
+        for (let i = 0; i < particlesCount * 3; i += 3) {
+            particlePositions[i] = (Math.random() - 0.5) * 25;
+            particlePositions[i + 1] = (Math.random() - 0.5) * 25;
+            particlePositions[i + 2] = (Math.random() - 0.5) * 25;
+            particleVelocities[i / 3] = 0.08 + Math.random() * 0.12;
+        }
+
+        const particleGeometry = new THREE.BufferGeometry();
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+        const particleMaterial = new THREE.PointsMaterial({
+            size: 0.15,
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending
+        });
+        const particlesField = new THREE.Points(particleGeometry, particleMaterial);
+        scene.add(particlesField);
+
+        /* 2. Heart Group (Tabs 1 & 2) */
+        const heartGroup = new THREE.Group();
+        scene.add(heartGroup);
+
+        const heartShape = new THREE.Shape();
+        const hx = 0, hy = 0;
+        heartShape.moveTo(hx + 0.25, hy + 0.25);
+        heartShape.bezierCurveTo(hx + 0.25, hy + 0.25, hx + 0.20, 0, hx, 0);
+        heartShape.bezierCurveTo(hx - 0.35, 0, hx - 0.35, hy + 0.35, hx - 0.35, hy + 0.35);
+        heartShape.bezierCurveTo(hx - 0.35, hy + 0.55, hx - 0.15, hy + 0.77, hx + 0.25, hy + 1.0);
+        heartShape.bezierCurveTo(hx + 0.65, hy + 0.77, hx + 0.85, hy + 0.55, hx + 0.85, hy + 0.35);
+        heartShape.bezierCurveTo(hx + 0.85, hy + 0.35, hx + 0.85, 0, hx + 0.5, 0);
+        heartShape.bezierCurveTo(hx + 0.35, 0, hx + 0.25, hy + 0.25, hx + 0.25, hy + 0.25);
+
+        const heartGeo = new THREE.ExtrudeGeometry(heartShape, {
+            depth: 0.35,
+            bevelEnabled: true,
+            bevelSegments: 4,
+            steps: 2,
+            bevelSize: 0.12,
+            bevelThickness: 0.12
+        });
+        heartGeo.center();
+
+        const heartMat = new THREE.MeshPhysicalMaterial({
+            color: 0xff3366,
+            emissive: 0x4a0e1c,
+            roughness: 0.1,
+            metalness: 0.2,
+            transmission: 0.6,
+            ior: 1.5
+        });
+        const heartMesh = new THREE.Mesh(heartGeo, heartMat);
+        heartMesh.rotation.z = Math.PI;
+        heartGroup.add(heartMesh);
+
+        const wireMat = new THREE.MeshBasicMaterial({
+            color: 0xff7597,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.25
+        });
+        const wireMesh = new THREE.Mesh(heartGeo, wireMat);
+        wireMesh.scale.set(1.05, 1.05, 1.05);
+        wireMesh.rotation.z = Math.PI;
+        heartGroup.add(wireMesh);
+
+        /* 3. Constellation Group (Tab 3) */
+        const constellationGroup = new THREE.Group();
+        constellationGroup.scale.set(0, 0, 0);
+        scene.add(constellationGroup);
+
+        const starData = [
+            { pos: [-2, 1, 0], text: "Наш первый неуклюжий, но такой важный привет." },
+            { pos: [0, 2.5, -1], text: "Ночь, когда мы проговорили до рассвета, забыв про время." },
+            { pos: [1.8, 0.5, 0.5], text: "Момент, когда слово «Мася» стало означать абсолютную нежность." },
+            { pos: [-0.5, -1.8, 1], text: "Осознание, что 750 километров — ничто для нас." },
+            { pos: [2, -1.5, -0.5], text: "День, когда мы пообещали встретиться. И мы это сделаем." }
+        ];
+
+        const starMeshes = [];
+        const starGeo = new THREE.SphereGeometry(0.15, 16, 16);
+        const starMat = new THREE.MeshBasicMaterial({ color: 0x0df2c9 });
+        const linePoints = [];
+
+        starData.forEach(sd => {
+            const mesh = new THREE.Mesh(starGeo, starMat.clone());
+            mesh.position.set(sd.pos[0], sd.pos[1], sd.pos[2]);
+
+            const hitbox = new THREE.Mesh(
+                new THREE.SphereGeometry(0.5, 8, 8),
+                new THREE.MeshBasicMaterial({ visible: false })
+            );
+            mesh.add(hitbox);
+
+            mesh.userData = { text: sd.text, isConstellationStar: true };
+            starMeshes.push(mesh);
+            constellationGroup.add(mesh);
+            linePoints.push(new THREE.Vector3(sd.pos[0], sd.pos[1], sd.pos[2]));
+        });
+
+        const lineGeo = new THREE.BufferGeometry().setFromPoints(linePoints);
+        const lineObj = new THREE.Line(
+            lineGeo,
+            new THREE.LineBasicMaterial({ color: 0x0df2c9, transparent: true, opacity: 0.4 })
+        );
+        constellationGroup.add(lineObj);
+
+        /* Mouse Coordinates & Listeners */
+        let mouseX = 0, mouseY = 0;
+        window.addEventListener('mousemove', (e) => {
+            mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+            mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
+        });
+
+        window.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) {
+                mouseX = (e.touches[0].clientX / window.innerWidth) * 2 - 1;
+                mouseY = -(e.touches[0].clientY / window.innerHeight) * 2 + 1;
+            }
+        });
+
+        /* Raycasting Interaction */
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2();
+
+        window.addEventListener('click', (e) => {
+            if (e.target.closest('button') || e.target.closest('.glass-panel') || e.target.closest('nav') || e.target.closest('#surnameBadge') || e.target.closest('textarea') || e.target.closest('.sdv-box')) return;
+
+            pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+            pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(pointer, camera);
+
+            if (currentTab === 'main' || currentTab === 'future') {
+                const intersects = raycaster.intersectObjects([heartMesh]);
+                if (intersects.length > 0) {
+                    heartGroup.scale.set(1.6, 1.6, 1.6);
+                    confetti({ particleCount: 35, spread: 65, origin: { y: 0.5 }, colors: ['#ff3366', '#ffffff'] });
+                    showToast("Импульс любви отправлен! ❤️");
+                    playMiniChime();
+                }
+            } else if (currentTab === 'sky') {
+                const intersects = raycaster.intersectObjects(starMeshes, true);
+                if (intersects.length > 0) {
+                    let clickedObj = intersects[0].object;
+                    if (clickedObj.parent && clickedObj.parent.userData.isConstellationStar) {
+                        clickedObj = clickedObj.parent;
+                    }
+                    if (clickedObj.userData.isConstellationStar) {
+                        const hud = document.getElementById('skyHud');
+                        const hudText = document.getElementById('skyHudText');
+                        hudText.textContent = "«" + clickedObj.userData.text + "»";
+                        hud.classList.remove('translate-y-10', 'opacity-0');
+                        hud.classList.add('translate-y-0', 'opacity-100');
+
+                        clickedObj.material.color.setHex(0xffffff);
+                        setTimeout(() => clickedObj.material.color.setHex(0x0df2c9), 350);
+                        confetti({ particleCount: 15, spread: 35, origin: { y: e.clientY / window.innerHeight }, colors: ['#0df2c9'] });
+                        playMiniChime();
+                    }
+                }
+            }
+        });
+
+        /* Animation Loop */
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            const elapsedTime = clock.getElapsedTime();
+            const dt = 0.05;
+
+            /* Tab 4: Rain Effect; Other Tabs: Cosmic Stars */
+            if (currentTab === 'stardew') {
+                particleMaterial.color.setHex(0x60a5fa);
+                particleMaterial.size = 0.18;
+                const pos = particleGeometry.attributes.position.array;
+                for (let i = 1; i < particlesCount * 3; i += 3) {
+                    pos[i] -= particleVelocities[Math.floor(i / 3)];
+                    if (pos[i] < -12) pos[i] = 12;
+                }
+                particleGeometry.attributes.position.needsUpdate = true;
+            } else {
+                particleMaterial.color.setHex(0xffffff);
+                particleMaterial.size = 0.15;
+                particlesField.rotation.y = elapsedTime * 0.02;
+                particlesField.rotation.x = mouseX * 0.1;
+            }
+
+            /* 3D Group Transitions */
+            if (currentTab === 'sky') {
+                heartGroup.scale.lerp(new THREE.Vector3(0, 0, 0), dt);
+                constellationGroup.scale.lerp(new THREE.Vector3(1, 1, 1), dt);
+                constellationGroup.rotation.y = THREE.MathUtils.lerp(constellationGroup.rotation.y, mouseX * 0.5 + elapsedTime * 0.1, dt);
+                constellationGroup.rotation.x = THREE.MathUtils.lerp(constellationGroup.rotation.x, -mouseY * 0.5, dt);
+            } else if (currentTab === 'stardew') {
+                heartGroup.scale.lerp(new THREE.Vector3(0, 0, 0), dt);
+                constellationGroup.scale.lerp(new THREE.Vector3(0, 0, 0), dt);
+            } else {
+                constellationGroup.scale.lerp(new THREE.Vector3(0, 0, 0), dt);
+                const beat = Math.sin(elapsedTime * 3.5) * 0.05;
+                const baseScale = 1.4;
+                heartGroup.scale.lerp(new THREE.Vector3(baseScale + beat, baseScale + beat, baseScale + beat), dt);
+                heartGroup.rotation.y += 0.008;
+                heartGroup.rotation.x = THREE.MathUtils.lerp(heartGroup.rotation.x, -mouseY * 0.5, dt);
+                heartGroup.rotation.y = THREE.MathUtils.lerp(heartGroup.rotation.y, mouseX * 0.8 + elapsedTime * 0.2, dt);
+            }
+
+            /* Gentle Camera Motion */
+            camera.position.x = THREE.MathUtils.lerp(camera.position.x, mouseX * 0.5, dt);
+            camera.position.y = THREE.MathUtils.lerp(camera.position.y, mouseY * 0.3, dt);
+            camera.lookAt(0, 0, 0);
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        /* --- TAB 1: CHAPTERS & LOGIC --- */
+        let morphed = false;
+        document.getElementById('surnameBadge').addEventListener('click', () => {
+            const nameEl = document.getElementById('surnameName');
+            nameEl.style.opacity = '0';
+            setTimeout(() => {
+                if (!morphed) {
+                    nameEl.textContent = 'Кох ♡';
+                    nameEl.className = 'text-rose-400 font-display font-bold';
+                    confetti({ particleCount: 45, spread: 60, origin: { y: 0.3 }, colors: ['#ff3366', '#ffffff'] });
+                    showToast("Эта фамилия тебе очень идет 😉");
+                    playMiniChime();
+                } else {
+                    nameEl.textContent = 'Максименко';
+                    nameEl.className = 'text-rose-300 group-hover:text-rose-400 transition-all';
+                }
+                nameEl.style.opacity = '1';
+                morphed = !morphed;
+            }, 150);
+        });
+
+        const chapters = [
+            { num: "01", date: "30 Ноября 2025", title: "Первая Искра", desc: "Наши орбиты пересеклись, и начался этот удивительный путь." },
+            { num: "02", date: "Декабрь 2025", title: "Ночи напролет", desc: "Голосовые и звонки до рассвета. Время перестало иметь значение." },
+            { num: "03", date: "Январь 2026", title: "Наш Тайный Язык", desc: "Первые локальные мемы, шутки и смех, понятный только нам двоим." },
+            { num: "04", date: "Февраль 2026", title: "Мася", desc: "Момент, когда это имя стало синонимом домашнего тепла и нежности." },
+            { num: "05", date: "Март 2026", title: "Сквозь Экраны", desc: "Километры бессильны перед тем, что рождается в наших сердцах." },
+            { num: "06", date: "Апрель 2026", title: "Полгода", desc: "Шесть месяцев вместе. Уверенность в том, что рядом верный союзник." },
+            { num: "07", date: "Май 2026", title: "Общие Мечты", desc: "Теплые вечера, совместные списки желаний и планы на будущее." },
+            { num: "08", date: "Июнь 2026", title: "Аниме и Уют", desc: "Шедевры Миядзаки, чаепития и ощущение абсолютной безопасности." },
+            { num: "09", date: "Июль 2026", title: "Крепкая Опора", desc: "Любые трудности рассеиваются, когда в тебя безоговорочно верят." },
+            { num: "10", date: "Август / Сент.", title: "Зрелость", desc: "Когда влюбленность переросла в непоколебимую и трепетную любовь." },
+            { num: "11", date: "30 Октября 2026", title: "11 Месяцев", desc: "Наш сегодняшний рубеж! Впереди первый год — и целая жизнь." }
+        ];
+
+        const chContainer = document.getElementById('chaptersContainer');
+        chapters.forEach((ch, idx) => {
+            const div = document.createElement('div');
+            div.className = "glass-panel tilt-card rounded-2xl p-6 group cursor-pointer border border-white/5";
+            div.innerHTML = `
+                <div class="flex justify-between items-center mb-3">
+                    <span class="text-[10px] font-mono uppercase text-zinc-400 group-hover:text-rose-400 transition-colors">Глава ${ch.num}</span>
+                    <span class="text-[9px] font-mono ${idx === 10 ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-white/5 text-zinc-400'} px-2 py-0.5 rounded">${ch.date}</span>
+                </div>
+                <h3 class="font-display text-lg text-white font-semibold mb-1 group-hover:text-rose-300 transition">${ch.title}</h3>
+                <p class="text-zinc-400 text-xs leading-relaxed">${ch.desc}</p>
+            `;
+            div.addEventListener('mousemove', (e) => {
+                const r = div.getBoundingClientRect();
+                div.style.transform = `perspective(1000px) rotateX(${-(e.clientY - r.top - r.height / 2) * 0.1}deg) rotateY(${(e.clientX - r.left - r.width / 2) * 0.1}deg) translateY(-4px)`;
+            });
+            div.addEventListener('mouseleave', () => div.style.transform = 'none');
+            div.addEventListener('click', () => {
+                showToast("Глава " + ch.num + ": сохранено в сердце ❤️");
+                playMiniChime();
+            });
+            chContainer.appendChild(div);
+        });
+
+        function stampCoupon(btn) {
+            btn.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 text-rose-400"></i> <span class="text-rose-300 font-semibold">Активировано для Маси!</span>`;
+            btn.classList.add('bg-rose-500/20', 'border-rose-500/50', 'pointer-events-none');
+            lucide.createIcons();
+            playMiniChime();
+            showToast("Купон активирован! Уже готов исполнять ❤️");
+        }
+
+        /* --- LETTER MODAL --- */
+        const letterModal = document.getElementById('letterModal');
+        const letterContentBox = document.getElementById('letterContentBox');
+
+        function openLetter() {
+            letterModal.classList.remove('opacity-0', 'pointer-events-none');
+            letterContentBox.classList.remove('scale-95');
+            letterContentBox.classList.add('scale-100');
+            playMiniChime();
+        }
+
+        function closeLetter() {
+            letterContentBox.classList.remove('scale-100');
+            letterContentBox.classList.add('scale-95');
+            letterModal.classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        function replyLove() {
+            closeLetter();
+            confetti({
+                particleCount: 100,
+                spread: 100,
+                origin: { y: 0.5 },
+                colors: ['#ff3366', '#ffedd5', '#9333ea']
+            });
+            showToast("Мася, ты самое ценное, что у меня есть! ❤️");
+            playMiniChime();
+        }
+
+        letterModal.addEventListener('click', (e) => {
+            if (e.target === letterModal) closeLetter();
+        });
+
+        /* --- TAB 2: WISHLIST & TIMER --- */
+        document.getElementById('sendWishBtn').addEventListener('click', () => {
+            const input = document.getElementById('wishlistInput');
+            if (input.value.trim() === '') {
+                showToast("Сначала напиши свое желание!");
+                return;
+            }
+
+            input.value = '';
+            confetti({ particleCount: 80, spread: 80, origin: { y: 0.6 }, colors: ['#ff3366', '#ffffff'] });
+            showToast("Желание сохранено и отправлено во Вселенную! ✨");
+            playMiniChime();
+
+            const heart = document.createElement('div');
+            heart.innerHTML = '❤️';
+            heart.className = 'wish-heart left-1/2 -translate-x-1/2 top-1/2';
+            document.body.appendChild(heart);
+            setTimeout(() => heart.remove(), 1600);
+        });
+
+        function updateCountdown() {
+            const target = new Date("2026-11-30T00:00:00").getTime();
+            const now = new Date().getTime();
+            const diff = target - now;
+
+            if (diff > 0) {
+                document.getElementById('c-days').innerText = Math.floor(diff / (1000 * 60 * 60 * 24));
+                document.getElementById('c-hours').innerText = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                document.getElementById('c-mins').innerText = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            }
+        }
+        setInterval(updateCountdown, 60000);
+        updateCountdown();
+
+        /* --- TAB 4: STARDEW VALLEY LOGIC --- */
+        const stardewDialogues = [
+            "«Мася, в Stardew Valley этот синий кулон дарят только той единственной, с кем хотят остаться навсегда. Наша ферма ждёт тебя, а я жду нашей встречи в ноябре!»",
+            "«Представь: за окном дождь, в печке трещат дрова, в инкубаторе согревается голубое яйцо, а мы укутались в плед и выбираем семена на весну.»",
+            "«Километры между Москвой и Гостомелем растворяются каждый раз, когда мы поливаем грядки и делимся самым сокровенным.»",
+            "«Я готов отдать все свои запасы и звёздные капли ради твоей искренней улыбки, Мася!»"
+        ];
+        let currentDialogueIdx = 0;
+
+        function nextStardewDialogue() {
+            currentDialogueIdx = (currentDialogueIdx + 1) % stardewDialogues.length;
+            const textEl = document.getElementById('stardewDialogText');
+            textEl.style.opacity = '0';
+            setTimeout(() => {
+                textEl.textContent = stardewDialogues[currentDialogueIdx];
+                textEl.style.opacity = '1';
+            }, 150);
+            playMiniChime();
+        }
+
+        function petAnimal(type) {
+            playMiniChime();
+            if (type === 'junimo') {
+                confetti({ particleCount: 25, spread: 50, origin: { y: 0.6 }, colors: ['#4caf50', '#81c784'] });
+                showToast("Джунимо подпрыгнул от радости и оставил звёздочку! ⭐");
+            } else if (type === 'chicken') {
+                confetti({ particleCount: 25, spread: 50, origin: { y: 0.6 }, colors: ['#60a5fa', '#ffffff'] });
+                showToast("Голубая курочка радостно кудахчет и прижимается к Масе! 💙");
+            } else if (type === 'cat') {
+                confetti({ particleCount: 25, spread: 50, origin: { y: 0.6 }, colors: ['#f59e0b', '#fb7185'] });
+                showToast("Котик свернулся клубочком и довольно замурлыкал! 🐾");
+            }
+        }
+
+        function triggerStardrop() {
+            playMiniChime();
+            confetti({
+                particleCount: 90,
+                spread: 90,
+                origin: { y: 0.5 },
+                colors: ['#a855f7', '#60a5fa', '#fef08a']
+            });
+            const modal = document.getElementById('stardropModal');
+            const box = document.getElementById('stardropBox');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            box.classList.replace('scale-90', 'scale-100');
+        }
+
+        function closeStardrop() {
+            const modal = document.getElementById('stardropModal');
+            const box = document.getElementById('stardropBox');
+            box.classList.replace('scale-100', 'scale-90');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        /* --- AUDIO & TOAST UTILITIES --- */
+        let audioCtx = null;
+        let isAudioOn = false;
+        let loFiInterval = null;
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        function playMiniChime() {
+            try {
+                const ctx = getAudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.08, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.3);
+            } catch (e) {}
+        }
+
+        const chords = [
+            [261.63, 329.63, 392.00],
+            [220.00, 261.63, 329.63],
+            [174.61, 220.00, 261.63]
+        ];
+        let chordIdx = 0;
+
+        function playPad() {
+            if (!isAudioOn) return;
+            const ctx = getAudioContext();
+            chords[chordIdx].forEach(f => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                const filter = ctx.createBiquadFilter();
+                osc.type = 'triangle';
+                osc.frequency.value = f;
+                filter.type = 'lowpass';
+                filter.frequency.value = 600;
+                gain.gain.setValueAtTime(0.001, ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.025, ctx.currentTime + 1);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 3.8);
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 4);
+            });
+            chordIdx = (chordIdx + 1) % chords.length;
+        }
+
+        document.getElementById('soundToggle').addEventListener('click', () => {
+            getAudioContext();
+            isAudioOn = !isAudioOn;
+            const waves = document.getElementById('audioWaves').querySelectorAll('span');
+            if (isAudioOn) {
+                document.getElementById('audioLabel').textContent = "Играет";
+                waves.forEach((el, i) => {
+                    el.classList.add('bg-rose-400');
+                    el.style.animation = "pulse 0.8s infinite " + (i * 0.2) + "s";
+                });
+                loFiInterval = setInterval(playPad, 4000);
+                playPad();
+                showToast("Lo-Fi эмбиент включен ✨");
+            } else {
+                document.getElementById('audioLabel').textContent = "Lo-Fi";
+                waves.forEach(el => {
+                    el.classList.remove('bg-rose-400');
+                    el.style.animation = 'none';
+                });
+                clearInterval(loFiInterval);
+            }
+        });
+
+        const toast = document.getElementById('toast');
+        const toastMsg = document.getElementById('toastMsg');
+        let toastTimer;
+
+        function showToast(text) {
+            clearTimeout(toastTimer);
+            toastMsg.textContent = text;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            toastTimer = setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
